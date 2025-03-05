@@ -92,7 +92,7 @@
 
     <!-- Include Custom JavaScript -->
     <script>
-        let populationData, gdpData, savingsData,expenditureData ;  // Declare populationData globally
+        let populationData, gdpData, savingsData,expenditureData, savingsExpenditureData ;  // Declare populationData globally
 
         // Load the CSV file using D3.js
         d3.csv("data/twocountries.csv").then(function(data) {
@@ -107,8 +107,14 @@
                 (d['Series Name'] === "GDP growth (annual %)") && 
                 (d['Country Name'] === "United States" || d['Country Name'] === "India")
             );
-            const filteredexpData = data.filter(d =>
-                (d['Series Name'] === "Gross savings" || d['Series Name'] === "Gross expenditure") &&
+            //filter for scatterplot 
+            const filteredSavingsData = data.filter(d =>
+                (d['Series Name'] === "Gross savings (% of GDP)") &&
+                (d['Country Name'] === "United States" || d['Country Name'] === "India")
+            );
+
+            const filteredExpenditureData = data.filter(d =>
+                (d['Series Name'] === "Gross national expenditure (% of GDP)") &&
                 (d['Country Name'] === "United States" || d['Country Name'] === "India")
             );
 
@@ -136,31 +142,56 @@
                     });
                 }
             });
-            //Reshape the data into an array of objects for easier plotting
-            savingsData = [];
-            expenditureData = [];
-
-            filteredData.forEach(d => {
+            // Correct the savingsExpenditureData merging logic
+            savingsExpenditureData = [];
+            filteredSavingsData.forEach(d => {
                 for (let year = 2015; year <= 2021; year++) {
-                    if (d['Series Name'] === "Gross savings") {
-                        savingsData.push({
+                    const expenditure = filteredExpenditureData.find(e =>
+                        e['Country Name'] === d['Country Name'] && e['year'] === year
+                    );
+                    if (expenditure) {
+                        savingsExpenditureData.push({
                             country: d['Country Name'],
                             year: year,
-                            savings: +d[`${year} [YR${year}]`]
-                        });
-                    } else if (d['Series Name'] === "Gross expenditure") {
-                        expenditureData.push({
-                            country: d['Country Name'],
-                            year: year,
-                            expenditure: +d[`${year} [YR${year}]`]
-                        });
-                    }
-                }
+                            savings: +d[`${year} [YR${year}]`],
+                            expenditure: +expenditure[`${year} [YR${year}]`]
             });
+        }
+    }
+});
+// Log the combined savings and expenditure data to check
+    console.log("Savings and Expenditure Data:", savingsExpenditureData);
+
+    // Separate savings and expenditure data for plotting
+    const savingsData = savingsExpenditureData.map(d => ({
+        country: d.country,
+        year: d.year,
+        savings: d.savings
+    }));
+
+    const expenditureData = savingsExpenditureData.map(d => ({
+        country: d.country,
+        year: d.year,
+        expenditure: d.expenditure
+    }));
+
+    // Log to verify the final structure of savings and expenditure data
+    console.log("Final Savings Data:", savingsData);
+    console.log("Final Expenditure Data:", expenditureData);
+
+
+
+
+            // Log the reshaped data to check it
+            console.log("Savings and Expenditure Data:", savingsExpenditureData);
+            console.log('Filtered Savings Data:', filteredSavingsData);
+            console.log('Filtered Expenditure Data:', filteredExpenditureData);
+
+            
             // Log the reshaped data to check it
             console.log("Population Data:", populationData);
             console.log("gdpData:", gdpData);
-            console.log("expenditure  Data:", savingsData, expenditureData,"United States");
+            
             
 
 
@@ -378,7 +409,7 @@ function createLineChart(data, containerId) {
     .attr("stroke-dashoffset", 0);  // Animate to 0, making the line fully drawn
 
 // Add dots with animation for each data point
-svg.selectAll(".dot")
+    svg.selectAll(".dot")
     .data(countryGDPData)
     .enter().append("circle")
     .attr("class", "dot")
@@ -403,73 +434,68 @@ svg.selectAll(".dot")
     // Initially show the data for the first country in the dropdown (United States)
     updateChart("United States");
 }
- // Create scatter plot function for Gross Savings vs Gross Expenditure
-function createScatterPlot(savingsData, expenditureData, country) {
-            // Filter data for the selected country
-            const filteredSavings = savingsData.filter(d => d.country === country);
-            const filteredExpenditure = expenditureData.filter(d => d.country === country);
+ // Assuming you already have your savingsExpenditureData loaded
 
-            // Merge the savings and expenditure data by year
-            const mergedData = filteredSavings.map((d, i) => ({
-                year: d.year,
-                savings: d.savings,
-                expenditure: filteredExpenditure[i].expenditure
-            }));
 
-            // Set up SVG dimensions
-            const margin = { top: 20, right: 30, bottom: 40, left: 40 };
-            const width = 600 - margin.left - margin.right;
-            const height = 400 - margin.top - margin.bottom;
+// Function to create a scatter plot
+function createScatterPlot(savingsData, expenditureData, containerId) {
+  // Set up margins and dimensions for the scatter plot
+  const margin = { top: 20, right: 40, bottom: 40, left: 60 },
+    width = 800 - margin.left - margin.right,
+    height = 400 - margin.top - margin.bottom;
 
-            // Remove the existing chart if there is one
-            d3.select("#chart-container").html("");
+  // Append the SVG element to the container
+  const svg = d3.select(`#${containerId}`)
+    .append('svg')
+    .attr('width', width + margin.left + margin.right)
+    .attr('height', height + margin.top + margin.bottom)
+    .append('g')
+    .attr('transform', `translate(${margin.left},${margin.top})`);
 
-            // Append a new SVG to the container
-            const svg = d3.select("#chart-container").append("svg")
-                .attr("width", width + margin.left + margin.right)
-                .attr("height", height + margin.top + margin.bottom)
-                .append("g")
-                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  // Define the scales for the x and y axes
+  const xScale = d3.scaleLinear()
+    .domain([0, d3.max(savingsData, d => d.savings)])
+    .range([0, width]);
 
-            // Set up the x and y scales
-            const x = d3.scaleLinear()
-                .domain([0, d3.max(mergedData, d => d.savings)])
-                .range([0, width]);
+  const yScale = d3.scaleLinear()
+    .domain([0, d3.max(expenditureData, d => d.expenditure)])
+    .range([height, 0]);
 
-            const y = d3.scaleLinear()
-                .domain([0, d3.max(mergedData, d => d.expenditure)])
-                .range([height, 0]);
+  // Add x-axis
+  svg.append('g')
+    .attr('transform', `translate(0,${height})`)
+    .call(d3.axisBottom(xScale));
 
-            // Create the scatter plot dots
-            svg.selectAll(".dot")
-                .data(mergedData)
-                .enter().append("circle")
-                .attr("class", "dot")
-                .attr("cx", d => x(d.savings))
-                .attr("cy", d => y(d.expenditure))
-                .attr("r", 5)
-                .attr("fill", country === "United States" ? "blue" : "pink");
+  // Add y-axis
+  svg.append('g')
+    .call(d3.axisLeft(yScale));
 
-            // Add the X axis
-            svg.append("g")
-                .attr("transform", "translate(0," + height + ")")
-                .call(d3.axisBottom(x));
+  // Add data points (scatter plot points)
+  svg.selectAll('dot')
+    .data(savingsData)
+    .enter().append('circle')
+    .attr('cx', d => xScale(d.savings))
+    .attr('cy', d => yScale(expenditureData.find(e => e.country === d.country && e.year === d.year).expenditure))
+    .attr('r', 5)
+    .style('fill', 'steelblue')
+    .style('opacity', 0.7);
 
-            // Add the Y axis
-            svg.append("g")
-                .call(d3.axisLeft(y));
+  // Add labels to the data points (optional)
+  svg.selectAll('text')
+    .data(savingsData)
+    .enter().append('text')
+    .attr('x', d => xScale(d.savings))
+    .attr('y', d => yScale(expenditureData.find(e => e.country === d.country && e.year === d.year).expenditure))
+    .attr('dy', -10)
+    .attr('text-anchor', 'middle')
+    .text(d => d.country)
+    .style('font-size', '10px')
+    .style('fill', '#333');
+}
 
-            // Add labels
-            svg.selectAll(".label")
-                .data(mergedData)
-                .enter().append("text")
-                .attr("class", "label")
-                .attr("x", d => x(d.savings))
-                .attr("y", d => y(d.expenditure) - 10)
-                .attr("text-anchor", "middle")
-                .text(d => `${d.year}`)
-                .style("font-size", "10px");
-        }
+// Call the function to create the scatter plot
+createScatterPlot(savingsData, expenditureData, "chart-container-3");
+
 
     </script>
 
