@@ -1,8 +1,7 @@
 {
-  "name": "a4",
+  "name": "combined-project",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "scripts": {
     "serve": "browser-sync start ./ -s --files './' --directory --watch --port 2000",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -13,5 +12,17 @@
     "browser-sync": "3.0.3",
     "bootstrap": "5.3.3",
     "d3": "7.9.0"
+  },
+  "dvhw5": {
+    "main": "script.js",
+    "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [],
+    "description": "",
+    "dependencies": {
+      "bootstrap": "^5.3.3",
+      "d3": "^7.9.0"
+    }
   }
 }

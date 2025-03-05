@@ -1,14 +1,484 @@
 <!DOCTYPE html>
-<html>
 
+
+<html lang="en">
 <head>
-    <title>DSCI 554 Assignment 5</title>
-</head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Population Comparison Dashboard: US vs India</title>
 
+    <!-- Bootstrap CSS -->
+<link rel="stylesheet" href="libs/bootstrap/bootstrap.min.css">
+
+<!-- Bootstrap JS (requires Popper.js, but it's included in the bundle) -->
+<script src="libs/bootstrap/bootstrap.bundle.min.js"></script>
+
+
+   <!-- D3.js -->
+<script src="libs/d3/d3.v7.min.js"></script>
+
+
+    <style>
+        /* Custom styling for the chart container */
+        svg {
+            font-family: Arial, sans-serif;
+        }
+
+        .bar {
+            transition: all 0.3s ease;
+        }
+
+        .bar:hover {
+            opacity: 0.7;
+        }
+
+        .legend rect {
+            stroke-width: 1px;
+        }
+
+        .legend text {
+            font-size: 12px;
+        }
+
+        .chart-container {
+            margin-bottom: 30px;
+        }
+
+        /* Optional: Style for the smaller dropdown */
+        .year_dropdown{
+            width: 200px; /* Adjust width */
+        }
+
+        /* Reduce width of the chart */
+        .chart-container svg {
+            width: 600px; /* Set the width of the bar chart */
+        }
+
+    </style>
+</head>
 <body>
+    <div class="container mt-4">
+        <h2>Population Comparison: United States vs India (2015-2021)</h2>
+
+        <!-- Dropdown for Year Range Selection -->
+        
+
+        <!-- Grid for visualizations -->
+        <div class="row">
+            <!-- Left Column (First chart - Bar chart) -->
+            <div class="col-md-6 chart-container">
+                <div id="chart-container-1"></div>
+            </div>
+
+            <!-- Right Column (Second chart - Line chart) -->
+            <div class="col-md-6 chart-container">
+                <div id="chart-container-2"></div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- Bottom-Left Corner (Scatterplot with Country Dropdown) -->
+            <div class="col-md-6 chart-container">
+                <label for="country-select">Select Country:</label>
+                <select id="country-select">
+                    <option value="USA">United States</option>
+                    <option value="IND">India</option>
+                </select>
+                <div id="chart-container-3"></div>
+            </div>
+        </div>
+
+        <!-- Other visualizations will be added later -->
+    </div>
+
+    <!-- Include Custom JavaScript -->
+    <script>
+        let populationData, gdpData, savingsData,expenditureData ;  // Declare populationData globally
+
+        // Load the CSV file using D3.js
+        d3.csv("data/twocountries.csv").then(function(data) {
+            // Filter the data for Population, total, and only for India and the US
+            const filteredData = data.filter(d => 
+                (d['Series Name'] === "Population, total") && 
+                (d['Country Name'] === "United States" || d['Country Name'] === "India")
+            );
+
+            // Filter the data for GDP growth, annual %, and only for India and the US
+            const filteredGDPData = data.filter(d => 
+                (d['Series Name'] === "GDP growth (annual %)") && 
+                (d['Country Name'] === "United States" || d['Country Name'] === "India")
+            );
+            const filteredexpData = data.filter(d =>
+                (d['Series Name'] === "Gross savings" || d['Series Name'] === "Gross expenditure") &&
+                (d['Country Name'] === "United States" || d['Country Name'] === "India")
+            );
+
+
+            // Reshape the data into an array of objects for easier plotting
+            populationData = [];
+            filteredData.forEach(d => {
+                for (let year = 2015; year <= 2021; year++) {
+                    populationData.push({
+                        country: d['Country Name'],
+                        year: year,
+                        population: +d[`${year} [YR${year}]`]
+                    });
+                }
+            });
+
+            // Reshape the GDP Growth data
+            gdpData = [];
+            filteredGDPData.forEach(d => {
+                for (let year = 2015; year <= 2021; year++) {
+                    gdpData.push({
+                        country: d['Country Name'],
+                        year: year,
+                        gdpGrowth: +d[`${year} [YR${year}]`]
+                    });
+                }
+            });
+            //Reshape the data into an array of objects for easier plotting
+            savingsData = [];
+            expenditureData = [];
+
+            filteredData.forEach(d => {
+                for (let year = 2015; year <= 2021; year++) {
+                    if (d['Series Name'] === "Gross savings") {
+                        savingsData.push({
+                            country: d['Country Name'],
+                            year: year,
+                            savings: +d[`${year} [YR${year}]`]
+                        });
+                    } else if (d['Series Name'] === "Gross expenditure") {
+                        expenditureData.push({
+                            country: d['Country Name'],
+                            year: year,
+                            expenditure: +d[`${year} [YR${year}]`]
+                        });
+                    }
+                }
+            });
+            // Log the reshaped data to check it
+            console.log("Population Data:", populationData);
+            console.log("gdpData:", gdpData);
+            console.log("expenditure  Data:", savingsData, expenditureData,"United States");
+            
+
+
+            // Create the bar chart for the first container
+            createBarChart(populationData, "#chart-container-1");
+
+            // Create the line chart for the second container
+            createLineChart(gdpData, "#chart-container-2");
+            // Create the scatter plot for the selected country
+            createScatterPlot(savingsData, expenditureData, "chart-container-3");
+
+            // Add event listener to the dropdown
+            d3.select("#country-select").on("change", function() {
+                const selectedCountry = this.value;
+                createScatterPlot(savingsData, expenditureData, selectedCountry);
+            });
+        
+
+            // Add interactivity for year range filter
+            d3.select("#yearSelect").on("change", function(event) {
+                const selectedRange = event.target.value;
+                let yearsToDisplay;
+
+                if (selectedRange === "2015-2021") {
+                    yearsToDisplay = [2015, 2016, 2017, 2018, 2019, 2020, 2021];
+                } else if (selectedRange === "2015-2018") {
+                    yearsToDisplay = [2015, 2016, 2017, 2018];
+                } else {
+                    yearsToDisplay = [2019, 2020, 2021];
+                }
+
+                const filteredData = populationData.filter(d => yearsToDisplay.includes(d.year));
+
+                // Remove the previous bar chart
+                d3.selectAll("#barchart").remove();
+
+                // Recreate bar chart with the filtered data
+                createBarChart(filteredData, "#chart-container-1");
+            });
+        });
+
+        // Create the bar chart function (existing code unchanged)
+        function createBarChart(data, containerId) {
+            const margin = { top: 20, right: 30, bottom: 40, left: 40 };
+            const width = 650 - margin.left - margin.right;
+            const height = 400 - margin.top - margin.bottom;
+
+            const svg = d3.select(containerId).append("svg")
+                .attr("id", "barchart")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            const x0 = d3.scaleBand()
+                .domain([2015, 2016, 2017, 2018, 2019, 2020, 2021])
+                .range([0, width])
+                .padding(0.1);
+
+            const x1 = d3.scaleBand()
+                .domain(["United States", "India"])
+                .rangeRound([0, x0.bandwidth()])
+                .padding(0.05);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d.population)])
+                .nice()
+                .range([height, 0]);
+
+            svg.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x0));
+
+            svg.append("g")
+                .call(d3.axisLeft(y));
+
+            svg.selectAll(".bar")
+                .data(data)
+                .enter().append("rect")
+                .attr("class", "bar")
+                .attr("x", d => x0(d.year) + x1(d.country))
+                .attr("y", height)  // Start the bars from the bottom
+                .attr("width", x1.bandwidth())
+                .attr("height", 0)   // Set the initial height to 0
+                .attr("fill", d => d.country === "United States" ? "blue" : "pink")
+                .transition()        // Start the transition
+                .duration(1000)      // Set the duration for the animation (in milliseconds)
+                .attr("y", d => y(d.population))  // Animate to the actual height
+                .attr("height", d => height - y(d.population));  // Animate to the actual height
+
+// Add text labels with animation
+            svg.selectAll(".text")
+                .data(data)
+                .enter().append("text")
+                .attr("class", "text")
+                .attr("x", d => x0(d.year) + x1(d.country) + x1.bandwidth() / 2)
+                .attr("y", height)
+                .attr("text-anchor", "middle")
+                .text(d => d.population.toLocaleString())
+                .style("font-size", "10px")
+                .transition()
+                .duration(1000)
+                .attr("y", d => y(d.population) - 5);  // Animate the position of the text
+
+            const legend = svg.append("g")
+                .attr("class", "legend")
+                .attr("transform", "translate(" + (width - 100) + ", 0)");
+
+            legend.append("rect")
+                .attr("width", 18)
+                .attr("height", 18)
+                .attr("fill", "blue");
+
+            legend.append("text")
+                .attr("x", 25)
+                .attr("y", 9)
+                .attr("dy", ".35em")
+                .text("United States");
+
+            legend.append("rect")
+                .attr("y", 20)
+                .attr("width", 18)
+                .attr("height", 18)
+                .attr("fill", "pink");
+
+            legend.append("text")
+                .attr("x", 25)
+                .attr("y", 29)
+                .attr("dy", ".35em")
+                .text("India");
+        }
+
+// Create the line chart function for GDP growth
+function createLineChart(data, containerId) {
+    const margin = { top: 20, right: 30, bottom: 40, left: 40 };
+    const width = 600 - margin.left - margin.right;
+    const height = 400 - margin.top - margin.bottom;
+
+    const svg = d3.select(containerId).append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    const x = d3.scaleBand()
+        .domain([2015, 2016, 2017, 2018, 2019, 2020, 2021])  // Discrete years
+        .range([0, width])  // Range of pixels
+        .padding(0.1);  // Optional: Adds space between the bars
+
+    const y = d3.scaleLinear()
+        .domain([d3.min(data, d => d.gdpGrowth), d3.max(data, d => d.gdpGrowth)])
+        .nice()
+        .range([height, 0]);
+
+    const line = d3.line()
+        .x(d => x(d.year))
+        .y(d => y(d.gdpGrowth));
+
     
-    The body contains all visible content!
+
+    const countryData = ["United States", "India"];
+
+    // Tooltip for interactive elements
+    const tooltip = d3.select(containerId).append("div")
+        .attr("class", "tooltip")
+        .style("position", "absolute")
+        .style("visibility", "hidden")
+        .style("background-color", "rgba(0,0,0,0.6)")
+        .style("color", "#fff")
+        .style("padding", "5px")
+        .style("border-radius", "3px");
+
+    // Add the dropdown menu for country selection
+    const dropdown = d3.select(containerId).append("select")
+        .attr("class", "dropdown")
+        .style("position", "absolute")
+        .style("top", margin.top + "px") 
+        .style("right", "10px")
+        .on("change", function() {
+            const selectedCountry = this.value;
+            updateChart(selectedCountry);
+        });
+
+    dropdown.selectAll("option")
+        .data(countryData)
+        .enter().append("option")
+        .attr("value", d => d)
+        .text(d => d);
+
+    // Function to update chart with selected country
+    function updateChart(selectedCountry) {
+        // Remove any previous country lines and dots
+        svg.selectAll(".line").remove();
+        svg.selectAll(".dot").remove();
+
+        // Filter data for the selected country
+        const countryGDPData = data.filter(d => d.country === selectedCountry);
+
+        svg.append("path")
+    .data([countryGDPData])
+    .attr("class", "line")
+    .attr("d", line)
+    .attr("fill", "none")
+    .attr("stroke", selectedCountry === "United States" ? "blue" : "pink")
+    .attr("stroke-width", 2)
+    .attr("stroke-dasharray", function() {
+        const length = this.getTotalLength();
+        return `${length} ${length}`;
+    })
+    .attr("stroke-dashoffset", function() {
+        return this.getTotalLength();
+    })
+    .transition()  // Start the transition
+    .duration(2000)  // Duration for the animation (in milliseconds)
+    .attr("stroke-dashoffset", 0);  // Animate to 0, making the line fully drawn
+
+// Add dots with animation for each data point
+svg.selectAll(".dot")
+    .data(countryGDPData)
+    .enter().append("circle")
+    .attr("class", "dot")
+    .attr("cx", d => x(d.year))
+    .attr("cy", height)  // Initially place the dots below the chart
+    .attr("r", 5)
+    .attr("fill", selectedCountry === "United States" ? "blue" : "pink")
+    .transition()
+    .duration(1000)  // Duration for the dot animation
+    .attr("cy", d => y(d.gdpGrowth));  // Animate to the correct Y position
+}
+
+    // Add axes
+    svg.append("g")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(x).tickValues([2015, 2016, 2017, 2018, 2019, 2020, 2021]));
+
+
+    svg.append("g")
+        .call(d3.axisLeft(y));
+
+    // Initially show the data for the first country in the dropdown (United States)
+    updateChart("United States");
+}
+ // Create scatter plot function for Gross Savings vs Gross Expenditure
+function createScatterPlot(savingsData, expenditureData, country) {
+            // Filter data for the selected country
+            const filteredSavings = savingsData.filter(d => d.country === country);
+            const filteredExpenditure = expenditureData.filter(d => d.country === country);
+
+            // Merge the savings and expenditure data by year
+            const mergedData = filteredSavings.map((d, i) => ({
+                year: d.year,
+                savings: d.savings,
+                expenditure: filteredExpenditure[i].expenditure
+            }));
+
+            // Set up SVG dimensions
+            const margin = { top: 20, right: 30, bottom: 40, left: 40 };
+            const width = 600 - margin.left - margin.right;
+            const height = 400 - margin.top - margin.bottom;
+
+            // Remove the existing chart if there is one
+            d3.select("#chart-container").html("");
+
+            // Append a new SVG to the container
+            const svg = d3.select("#chart-container").append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            // Set up the x and y scales
+            const x = d3.scaleLinear()
+                .domain([0, d3.max(mergedData, d => d.savings)])
+                .range([0, width]);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(mergedData, d => d.expenditure)])
+                .range([height, 0]);
+
+            // Create the scatter plot dots
+            svg.selectAll(".dot")
+                .data(mergedData)
+                .enter().append("circle")
+                .attr("class", "dot")
+                .attr("cx", d => x(d.savings))
+                .attr("cy", d => y(d.expenditure))
+                .attr("r", 5)
+                .attr("fill", country === "United States" ? "blue" : "pink");
+
+            // Add the X axis
+            svg.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x));
+
+            // Add the Y axis
+            svg.append("g")
+                .call(d3.axisLeft(y));
+
+            // Add labels
+            svg.selectAll(".label")
+                .data(mergedData)
+                .enter().append("text")
+                .attr("class", "label")
+                .attr("x", d => x(d.savings))
+                .attr("y", d => y(d.expenditure) - 10)
+                .attr("text-anchor", "middle")
+                .text(d => `${d.year}`)
+                .style("font-size", "10px");
+        }
+
+    </script>
+
+
+    <!-- Include Bootstrap and Popper.js scripts -->
+<script src="libs/bootstrap/bootstrap.bundle.min.js"></script> <!-- Use locally hosted bootstrap.bundle.min.js -->
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
 
 </body>
-
 </html>
+
