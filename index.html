@@ -75,16 +75,7 @@
                 <div id="chart-container-2"></div>
             </div>
         </div>
-        <div class="row">
-            <!-- Bottom-Left Corner (Scatterplot with Country Dropdown) -->
-            <div class="col-md-6 chart-container">
-                <label for="country-select">Select Country:</label>
-                <select id="country-select">
-                    <option value="USA">United States</option>
-                    <option value="IND">India</option>
-                </select>
-                <div id="chart-container-3"></div>
-            </div>
+        
         </div>
 
         <!-- Other visualizations will be added later -->
@@ -92,7 +83,7 @@
 
     <!-- Include Custom JavaScript -->
     <script>
-        let populationData, gdpData, savingsData,expenditureData, savingsExpenditureData ;  // Declare populationData globally
+        let populationData, gdpData ;  // Declare populationData globally
 
         // Load the CSV file using D3.js
         d3.csv("data/twocountries.csv").then(function(data) {
@@ -159,8 +150,8 @@
         }
     }
 });
-// Log the combined savings and expenditure data to check
-    console.log("Savings and Expenditure Data:", savingsExpenditureData);
+
+ 
 
     // Separate savings and expenditure data for plotting
     const savingsData = savingsExpenditureData.map(d => ({
@@ -437,64 +428,6 @@ function createLineChart(data, containerId) {
  // Assuming you already have your savingsExpenditureData loaded
 
 
-// Function to create a scatter plot
-function createScatterPlot(savingsData, expenditureData, containerId) {
-  // Set up margins and dimensions for the scatter plot
-  const margin = { top: 20, right: 40, bottom: 40, left: 60 },
-    width = 800 - margin.left - margin.right,
-    height = 400 - margin.top - margin.bottom;
-
-  // Append the SVG element to the container
-  const svg = d3.select(`#${containerId}`)
-    .append('svg')
-    .attr('width', width + margin.left + margin.right)
-    .attr('height', height + margin.top + margin.bottom)
-    .append('g')
-    .attr('transform', `translate(${margin.left},${margin.top})`);
-
-  // Define the scales for the x and y axes
-  const xScale = d3.scaleLinear()
-    .domain([0, d3.max(savingsData, d => d.savings)])
-    .range([0, width]);
-
-  const yScale = d3.scaleLinear()
-    .domain([0, d3.max(expenditureData, d => d.expenditure)])
-    .range([height, 0]);
-
-  // Add x-axis
-  svg.append('g')
-    .attr('transform', `translate(0,${height})`)
-    .call(d3.axisBottom(xScale));
-
-  // Add y-axis
-  svg.append('g')
-    .call(d3.axisLeft(yScale));
-
-  // Add data points (scatter plot points)
-  svg.selectAll('dot')
-    .data(savingsData)
-    .enter().append('circle')
-    .attr('cx', d => xScale(d.savings))
-    .attr('cy', d => yScale(expenditureData.find(e => e.country === d.country && e.year === d.year).expenditure))
-    .attr('r', 5)
-    .style('fill', 'steelblue')
-    .style('opacity', 0.7);
-
-  // Add labels to the data points (optional)
-  svg.selectAll('text')
-    .data(savingsData)
-    .enter().append('text')
-    .attr('x', d => xScale(d.savings))
-    .attr('y', d => yScale(expenditureData.find(e => e.country === d.country && e.year === d.year).expenditure))
-    .attr('dy', -10)
-    .attr('text-anchor', 'middle')
-    .text(d => d.country)
-    .style('font-size', '10px')
-    .style('fill', '#333');
-}
-
-// Call the function to create the scatter plot
-createScatterPlot(savingsData, expenditureData, "chart-container-3");
 
 
     </script>
