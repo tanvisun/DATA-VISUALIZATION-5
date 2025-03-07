@@ -3,10 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Population Comparison Dashboard: US vs India</title>
+    <title>Country Comparison Dashboard: US vs India</title>
     <link rel="stylesheet" href="libs/bootstrap/bootstrap.min.css">
     <script src="libs/d3/d3.v7.min.js"></script>
     <style>
+        body{background-color: #fdf5e2; /* Light gray background */
+        font-family: Arial, sans-serif; /* Optional: Change the font */
+    }/* ChatGPT Link at the top right */
+    #chatgpt-link {
+            position: absolute;
+            bottom: 50px;
+            right: 20px;
+            background-color: #007bff;
+            margin-top: 300;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            text-decoration: none;
+        }
+
+        #chatgpt-link:hover {
+            background-color: #0056b3;
+        }
+
+        
+
         svg {
             font-family: Arial, sans-serif;
         }
@@ -48,11 +70,32 @@
             border: 1px solid #ddd;
             padding: 10px;
         }
+        #chatgpt-usage-note {
+            text-align: bottom;
+            margin-top: 300px;
+            font-size: 14px;
+            color: #333;
+            background-color: 		#fdf1cb;
+            padding: 20px 0;
+            position: relative;
+        }
+
+        #chatgpt-usage-note a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        #chatgpt-usage-note a:hover {
+            text-decoration: underline;
+        }
+
+        
     </style>
 </head>
 <body>
+    
     <div class="container-fluid">
-        <h2 class="text-center mt-4 mb-4">Population Comparison: United States vs India (2015-2021)</h2>
+        <h2 class="text-center mt-4 mb-4">Country Comparison: United States vs India (2015-2021)</h2>
         <div class="row" style="height: 80vh;">
             <div class="col-md-6 quadrant">
                 <div class="chart-container">
@@ -80,7 +123,7 @@
             </div>
         </div>
     </div>
-
+    
     <script>
         let incomeGrowthData, gdpData, savingsData;
 
@@ -440,6 +483,7 @@
         }
 
         function createPieChart(containerId) {
+                d3.select(containerId).select("div.dropdown").remove();
             const dropdownContainer = d3.select(containerId)
                 .append("div")
                 .style("text-align", "center")
@@ -479,121 +523,149 @@
             });
 
             function updatePieChart(year) {
-                d3.csv("data/twocountries.csv").then(function (data) {
-                    const filteredData = data.filter(d =>
-                        d['Series Name'] === "Population, total" &&
-                        (d['Country Name'] === "United States" || d['Country Name'] === "India")
-                    );
+    d3.csv("data/twocountries.csv").then(function (data) {
+        // Filter the data for the selected year and countries (United States and India)
+        const filteredData = data.filter(d =>
+            d['Series Name'] === "Population, total" &&
+            (d['Country Name'] === "United States" || d['Country Name'] === "India")
+        );
 
-                    const populationData = filteredData.map(d => ({
-                        country: d["Country Name"],
-                        population: +d[`${year} [YR${year}]`]
-                    }));
+        // Extract population data for the selected year
+        const populationData = filteredData.map(d => ({
+            country: d["Country Name"],
+            population: +d[`${year} [YR${year}]`]
+        }));
 
-                    d3.select(`${containerId} svg`).remove();
+        // Remove the previous svg element
+        d3.select(`${containerId} svg`).remove();
 
-                    const width = 400, height = 400, radius = Math.min(width, height) / 2;
+        const width = 400, height = 400, radius = Math.min(width, height) / 2;
 
-                    const svg = d3.select(containerId)
-                        .append("svg")
-                        .attr("width", width)
-                        .attr("height", height)
-                        .append("g")
-                        .attr("transform", `translate(${width / 2}, ${height / 2})`);
+        const svg = d3.select(containerId)
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", `translate(${width / 2}, ${height / 2})`);
 
-                    const color = d3.scaleOrdinal()
-                        .domain(populationData.map(d => d.country))
-                        .range(["blue", "pink"]);
+        const color = d3.scaleOrdinal()
+            .domain(populationData.map(d => d.country))
+            .range(["blue", "pink"]);
 
-                    const pie = d3.pie()
-                        .value(d => d.population);
+        const pie = d3.pie()
+            .value(d => d.population);
 
-                    const arc = d3.arc()
-                        .innerRadius(0)
-                        .outerRadius(radius);
+        const arc = d3.arc()
+            .innerRadius(0)
+            .outerRadius(radius);
 
-                    const tooltip = d3.select(containerId).append("div")
-                        .style("position", "absolute")
-                        .style("visibility", "hidden")
-                        .style("background", "rgba(0, 0, 0, 0.7)")
-                        .style("color", "#fff")
-                        .style("padding", "5px 10px")
-                        .style("border-radius", "5px")
-                        .style("font-size", "12px");
+        // Tooltip setup
+        const tooltip = d3.select(containerId).append("div")
+            .style("position", "absolute")
+            .style("visibility", "hidden")
+            .style("background", "rgba(0, 0, 0, 0.7)")
+            .style("color", "#fff")
+            .style("padding", "5px 10px")
+            .style("border-radius", "5px")
+            .style("font-size", "12px");
 
-                    const arcs = svg.selectAll("arc")
-                        .data(pie(populationData))
-                        .enter()
-                        .append("g");
+        // Add arcs for the pie chart
+        const arcs = svg.selectAll("arc")
+            .data(pie(populationData))
+            .enter()
+            .append("g");
 
-                    arcs.append("path")
-                        .attr("d", arc)
-                        .attr("fill", d => color(d.data.country))
-                        .attr("stroke", "#fff")
-                        .style("stroke-width", "2px")
-                        .style("opacity", 0.8)
-                        .on("mouseover", (event, d) => {
-                            tooltip.style("visibility", "visible")
-                                .text(`${d.data.country}: ${Math.round(d.data.population / 1e6)} M`)
-                                .style("left", (event.pageX + 10) + "px")
-                                .style("top", (event.pageY - 30) + "px");
-                        })
-                        .on("mousemove", (event) => {
-                            tooltip.style("left", (event.pageX + 10) + "px")
-                                .style("top", (event.pageY - 30) + "px");
-                        })
-                        .on("mouseout", () => tooltip.style("visibility", "hidden"))
-                        .transition()
-                        .duration(1000)
-                        .attrTween("d", function (d) {
-                            const i = d3.interpolate({ startAngle: 0, endAngle: 0 }, d);
-                            return function (t) { return arc(i(t)); };
-                        });
+        arcs.append("path")
+            .attr("d", arc)
+            .attr("fill", d => color(d.data.country))
+            .attr("stroke", "#fff")
+            .style("stroke-width", "2px")
+            .style("opacity", 0.8)
+            .on("mouseover", (event, d) => {
+                tooltip.style("visibility", "visible")
+                    .text(`${d.data.country}: ${Math.round(d.data.population / 1e6)} M`)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 30) + "px");
+            })
+            .on("mousemove", (event) => {
+                tooltip.style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 30) + "px");
+            })
+            .on("mouseout", () => tooltip.style("visibility", "hidden"))
+            .transition()
+            .duration(1000)
+            .attrTween("d", function (d) {
+                const i = d3.interpolate({ startAngle: 0, endAngle: 0 }, d);
+                return function (t) { return arc(i(t)); };
+            });
 
-                    arcs.append("text")
-                        .attr("transform", d => `translate(${arc.centroid(d)})`)
-                        .attr("text-anchor", "middle")
-                        .style("font-size", "12px")
-                        .style("fill", "#fff")
-                        .html(d => {
-                            const percent = Math.round((d.data.population / d3.sum(populationData, d => d.population)) * 100);
-                            const popInMillions = Math.round(d.data.population / 1e6);
-                            return `${percent}%\n${popInMillions}M`;
-                        });
+        arcs.append("text")
+            .attr("transform", d => `translate(${arc.centroid(d)})`)
+            .attr("text-anchor", "middle")
+            .style("font-size", "12px")
+            .style("fill", "#fff")
+            .html(d => {
+                const percent = Math.round((d.data.population / d3.sum(populationData, d => d.population)) * 100);
+                const popInMillions = Math.round(d.data.population / 1e6);
+                return `${percent}%\n${popInMillions}M`;
+            });
 
-                    const totalPopulation = d3.sum(populationData, d => d.population);
-                    svg.append("text")
-                        .attr("x", 0)
-                        .attr("y", radius + 20)
-                        .attr("text-anchor", "middle")
-                        .style("font-size", "14px")
-                        .style("fill", "#000")
-                        .style("font-weight", "bold")
-                        .text(`Total Population: ${Math.round(totalPopulation / 1e6)} M`);
+        // Display total population text
+        const totalPopulation = d3.sum(populationData, d => d.population);
+        svg.append("text")
+            .attr("x", 0)
+            .attr("y", radius + 20)
+            .attr("text-anchor", "middle")
+            .style("font-size", "14px")
+            .style("fill", "#000")
+            .style("font-weight", "bold")
+            .text(`Total Population: ${Math.round(totalPopulation / 1e6)} M`);
 
-                    const legend = svg.append("g")
-                        .attr("transform", `translate(-50, ${radius + 20})`);
+        // Add legend
+        const legend = svg.append("g")
+            .attr("transform", `translate(-50, ${radius + 20})`);
 
-                    legend.selectAll("rect")
-                        .data(populationData)
-                        .enter().append("rect")
-                        .attr("x", 0)
-                        .attr("y", (d, i) => i * 20)
-                        .attr("width", 15)
-                        .attr("height", 15)
-                        .attr("fill", d => color(d.country));
+        legend.selectAll("rect")
+            .data(populationData)
+            .enter().append("rect")
+            .attr("x", 0)
+            .attr("y", (d, i) => i * 20)
+            .attr("width", 15)
+            .attr("height", 15)
+            .attr("fill", d => color(d.country));
 
-                    legend.selectAll("text")
-                        .data(populationData)
-                        .enter().append("text")
-                        .attr("x", 20)
-                        .attr("y", (d, i) => i * 20 + 12)
-                        .text(d => d.country)
-                        .style("font-size", "14px");
-                });
-            }
+        legend.selectAll("text")
+            .data(populationData)
+            .enter().append("text")
+            .attr("x", 20)
+            .attr("y", (d, i) => i * 20 + 12)
+            .text(d => d.country)
+            .style("font-size", "14px");
+    });
+}
         }
     </script>
     <script src="libs/bootstrap/bootstrap.bundle.min.js"></script>
+    
+    </div>
+    <div id="chatgpt-usage-note">
+        <h3>How I Used ChatGPT</h3>
+        <p>
+            I used ChatGPT for:<br><br>
+            1. <strong>Generating D3.js Code</strong>: ChatGPT helped me by providing code examples for creating different types of charts (bar charts, line charts, pie charts) using D3.js. It also guided me through adding interactivity like tooltips to display values when hovering over elements, and creating dropdowns for year selection.<br><br>
+            2. <strong>Adding UI Elements</strong>: ChatGPT assisted me in adding a link to ChatGPT on my dashboard. It offered multiple ways to position the link, including placing it beside the title or at the top-right corner of the page, with helpful CSS styling to ensure it looked clean and functional.<br><br>
+            3. <strong>Customizing Layouts</strong>: ChatGPT gave me advice on improving the layout of my dashboard, including centering content, adjusting spacing, and making sure elements like the ChatGPT link were placed without additional containers.<br><br>
+            4. <strong>Learning HTML/CSS and D3.js</strong>: ChatGPT helped me understand how to use flexbox, absolute positioning, and other CSS properties to arrange elements effectively and make the dashboard visually appealing and user-friendly.<br><br>
+            This support has enabled me to develop a dynamic, interactive dashboard with well-organized content and additional features like the ChatGPT link.
+        </p>
+    </div>  
 </body>
+<a id="chatgpt-link" href="https://chatgpt.com/share/67ca4329-3264-8008-a01f-6a5ee6419a26" target="_blank">Go to ChatGPT</a>
+
+    <!-- Main content area where your charts will be displayed -->
+    <div id="main-content">
+        <!-- Example content (replace with your actual charts or content) -->
+        <svg width="250" height="200"></svg>
+
+
 </html>
